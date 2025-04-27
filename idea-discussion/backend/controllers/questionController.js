@@ -4,18 +4,10 @@ import Problem from '../models/Problem.js';
 import Solution from '../models/Solution.js';
 import mongoose from 'mongoose';
 import { generatePolicyDraft } from '../workers/policyGenerator.js'; // Import the worker function
-// GET /api/questions - Fetch all sharp questions
-export const getAllQuestions = async (req, res) => {
-    try {
-        const questions = await SharpQuestion.find().sort({ createdAt: -1 });
-        res.status(200).json(questions);
-    } catch (error) {
-        console.error('Error fetching all questions:', error);
-        res.status(500).json({ message: 'Error fetching questions', error: error.message });
-    }
-};
+import { generateDigestDraft } from '../workers/digestGenerator.js'; // Import the digest worker function
 
-// GET /api/questions/:questionId/details - Fetch details for a specific question
+
+// GET /api/themes/:themeId/questions/:questionId/details - 特定の質問の詳細を取得
 export const getQuestionDetails = async (req, res) => {
     const { questionId } = req.params;
 
@@ -73,7 +65,7 @@ export const getQuestionDetails = async (req, res) => {
     }
 };
 
-// POST /api/questions/:questionId/generate-policy - Trigger policy draft generation
+// POST /api/themes/:themeId/questions/:questionId/generate-policy - ポリシードラフト生成
 export const triggerPolicyGeneration = async (req, res) => {
     const { questionId } = req.params;
 
@@ -102,5 +94,54 @@ export const triggerPolicyGeneration = async (req, res) => {
     } catch (error) {
         console.error(`Error triggering policy generation for question ${questionId}:`, error);
         res.status(500).json({ message: 'Error triggering policy generation', error: error.message });
+    }
+};
+
+// POST /api/themes/:themeId/questions/:questionId/generate-digest - ダイジェストドラフト生成
+export const triggerDigestGeneration = async (req, res) => {
+    const { questionId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+        return res.status(400).json({ message: 'Invalid question ID format' });
+    }
+
+    try {
+        // Check if the question exists (optional but good practice)
+        const question = await SharpQuestion.findById(questionId);
+        if (!question) {
+            return res.status(404).json({ message: 'Question not found' });
+        }
+
+        // Trigger the generation asynchronously (using setTimeout for simplicity)
+        // In production, use a proper job queue (BullMQ, Agenda, etc.)
+        setTimeout(() => {
+            generateDigestDraft(questionId).catch(err => {
+                console.error(`[API Trigger] Error during background digest generation for ${questionId}:`, err);
+            });
+        }, 0);
+
+        console.log(`[API Trigger] Digest generation triggered for questionId: ${questionId}`);
+        res.status(202).json({ message: `Digest draft generation started for question ${questionId}` });
+
+    } catch (error) {
+        console.error(`Error triggering digest generation for question ${questionId}:`, error);
+        res.status(500).json({ message: 'Error triggering digest generation', error: error.message });
+    }
+};
+
+// GET /api/themes/:themeId/questions - 特定テーマの質問を取得
+export const getQuestionsByTheme = async (req, res) => {
+    const { themeId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(themeId)) {
+        return res.status(400).json({ message: 'Invalid theme ID format' });
+    }
+
+    try {
+        const questions = await SharpQuestion.find({ themeId }).sort({ createdAt: -1 });
+        res.status(200).json(questions);
+    } catch (error) {
+        console.error(`Error fetching questions for theme ${themeId}:`, error);
+        res.status(500).json({ message: 'Error fetching theme questions', error: error.message });
     }
 };

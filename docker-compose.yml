@@ -56,7 +56,7 @@ services:
     volumes:
       - ./policy-edit/frontend:/app
       # Add node_modules volume
-      - /app/node_modules
+      - node_modules_frontend:/app/node_modules
     ports:
       - "5174:5173" # Expose Vite dev server port (Host: 5174, Container: 5173)
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0" # Install deps if needed and run dev server
@@ -98,3 +98,5 @@ services:
 volumes:
   mongo_data:                  # Define the named volume for MongoDB
   # Removed node_modules volumes as they are part of the production image
+  node_modules_frontend:      # Named volume for frontend node_modules
+  

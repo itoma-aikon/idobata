@@ -18,7 +18,7 @@ interface OpenAIMessage {
 
 // API base URL from environment variables
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
 const ChatPanel: React.FC = () => {
   // Local state for input, loading, connection, and general errors
@@ -70,83 +70,97 @@ const ChatPanel: React.FC = () => {
   // Check backend connection status on component mount
   // Check connection status and attempt auto-connect on mount
   useEffect(() => {
-    const initializeConnection = async () => {
-      setIsLoading(true); // Start loading indicator early
-      setError(null);
-      const initiallyConnected = await checkConnectionStatus(); // Check initial status
-
-      if (!initiallyConnected) {
-        // If not connected, attempt to connect
-        console.log("Not connected, attempting auto-connection...");
-        try {
-          // connectToGithubContributionServer now primarily handles the API call and setting isConnected/error
-          await connectToGithubContributionServer();
-          // Check status *after* the attempt to confirm
-          const connectedAfterAttempt = await checkConnectionStatus();
-
-          // Add appropriate message only if an MD file is active *at the time the connection resolves*
-          // Need to get the latest state values inside the async function
-          const currentStoreState = useContentStore.getState();
-          const isActiveMd =
-            currentStoreState.contentType === "file" &&
-            currentStoreState.currentPath.endsWith(".md");
-          const pathForMessage = currentStoreState.currentPath;
-
-          if (isActiveMd && pathForMessage) {
-            if (connectedAfterAttempt) {
-              addMessageToThread(pathForMessage, {
-                text: "サーバーに自動接続しました。",
-                sender: "bot",
-              });
+        const initializeConnection = async () => {
+          setIsLoading(true); // Start loading indicator early
+          setError(null);
+    
+          // currentBranchId が null でない場合にのみ接続処理を実行
+          if (currentBranchId !== null) {
+            console.log(`テーマID (${currentBranchId}) が利用可能です。チャットサーバーへの接続を試みます...`); // ログにテーマIDを表示
+            const initiallyConnected = await checkConnectionStatus(); // checkConnectionStatus 内で currentBranchId を使用
+    
+            if (!initiallyConnected) {
+              // If not connected, attempt to connect
+              console.log("Not connected, attempting auto-connection...");
+              try {
+                // connectToGithubContributionServer now primarily handles the API call and setting isConnected/error
+                await connectToGithubContributionServer(); // connectToGithubContributionServer 内で currentBranchId を使用
+                // Check status *after* the attempt to confirm
+                const connectedAfterAttempt = await checkConnectionStatus();
+    
+                // Add appropriate message only if an MD file is active *at the time the connection resolves*
+                // Need to get the latest state values inside the async function
+                const currentStoreState = useContentStore.getState();
+                const isActiveMd =
+                  currentStoreState.contentType === "file" &&
+                  currentStoreState.currentPath.endsWith(".md");
+                const pathForMessage = currentStoreState.currentPath;
+    
+                if (isActiveMd && pathForMessage) {
+                  if (connectedAfterAttempt) {
+                    addMessageToThread(pathForMessage, {
+                      text: "サーバーに自動接続しました。",
+                      sender: "bot",
+                    });
+                  } else {
+                    // Use the error state which should have been set by connectToGithubContributionServer
+                    const currentError = error; // Capture error state after connect attempt
+                    addMessageToThread(pathForMessage, {
+                      text: `エラー：サーバーへの自動接続に失敗しました。${currentError || "接続試行に失敗しました。"}`.trim(),
+                      sender: "bot",
+                    });
+                  }
+                } else if (!connectedAfterAttempt) {
+                  console.warn(
+                    "自動接続に失敗しましたが、メッセージを表示するアクティブなMDファイルがありません。"
+                  );
+                } else {
+                  console.log(
+                    "自動接続しましたが、メッセージを表示するアクティブなMDファイルがありません。"
+                  );
+                }
+              } catch (err) {
+                // Catch errors during the connection *process* itself (e.g., network issues before API call)
+                // Errors from the API call itself are handled within connectToGithubContributionServer setting the 'error' state
+                console.error("初期接続試行中にエラーが発生しました:", err);
+                const errorMessage =
+                  err instanceof Error ? err.message : "不明な初期化エラー";
+                setError(errorMessage); // Set error state
+                // await checkConnectionStatus(); // この時点ではエラーになっているので再度チェックしても意味がない可能性
+                setIsConnected(false); // 明示的に接続状態を false に設定
+    
+                // Add error message if MD file is active
+                const currentStoreState = useContentStore.getState();
+                const isActiveMd =
+                  currentStoreState.contentType === "file" &&
+                  currentStoreState.currentPath.endsWith(".md");
+                const pathForMessage = currentStoreState.currentPath;
+                if (isActiveMd && pathForMessage) {
+                  addMessageToThread(pathForMessage, {
+                    text: `エラー：初期化中に失敗しました。${errorMessage}`,
+                    sender: "bot",
+                  });
+                }
+              } finally {
+                setIsLoading(false); // Ensure loading is turned off
+              }
             } else {
-              // Use the error state which should have been set by connectToGithubContributionServer
-              const currentError = error; // Capture error state after connect attempt
-              addMessageToThread(pathForMessage, {
-                text: `エラー：サーバーへの自動接続に失敗しました。${currentError || "接続試行に失敗しました。"}`.trim(),
-                sender: "bot",
-              });
+              console.log("マウント時に既に接続されています。");
+              setIsLoading(false); // Turn off loading if already connected
             }
-          } else if (!connectedAfterAttempt) {
-            console.warn(
-              "自動接続に失敗しましたが、メッセージを表示するアクティブなMDファイルがありません。"
-            );
           } else {
-            console.log(
-              "自動接続しましたが、メッセージを表示するアクティブなMDファイルがありません。"
-            );
+             // currentBranchId が null の場合は接続処理をスキップ
+             console.warn("テーマIDがまだ利用できないため、チャットサーバーへの接続をスキップしました。テーマを選択すると接続を試みます。");
+             setIsLoading(false); // Ensure loading is turned off if skipped
+             setIsConnected(false); // 明示的に接続状態を false に設定
           }
-        } catch (err) {
-          // Catch errors during the connection *process* itself (e.g., network issues before API call)
-          // Errors from the API call itself are handled within connectToGithubContributionServer setting the 'error' state
-          console.error("初期接続試行中にエラーが発生しました:", err);
-          const errorMessage =
-            err instanceof Error ? err.message : "不明な初期化エラー";
-          setError(errorMessage); // Set error state
-          await checkConnectionStatus(); // Ensure isConnected reflects failure
+        };
+    
+        // 依存配列に currentBranchId を追加
+        // currentBranchId が null から有効な値に変わったときに initializeConnection が再実行される
+        initializeConnection();
+      }, [currentBranchId]); // 修正後: 依存配列に currentBranchId を追加
 
-          // Add error message if MD file is active
-          const currentStoreState = useContentStore.getState();
-          const isActiveMd =
-            currentStoreState.contentType === "file" &&
-            currentStoreState.currentPath.endsWith(".md");
-          const pathForMessage = currentStoreState.currentPath;
-          if (isActiveMd && pathForMessage) {
-            addMessageToThread(pathForMessage, {
-              text: `エラー：初期化中に失敗しました。${errorMessage}`,
-              sender: "bot",
-            });
-          }
-        } finally {
-          setIsLoading(false); // Ensure loading is turned off
-        }
-      } else {
-        console.log("マウント時に既に接続されています。");
-        setIsLoading(false); // Turn off loading if already connected
-      }
-    };
-
-    initializeConnection();
-  }, []); // Run only once on mount
 
   // Get user name on mount
   useEffect(() => {
@@ -174,7 +188,7 @@ const ChatPanel: React.FC = () => {
   // Check if the backend is connected and return the status
   const checkConnectionStatus = async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/status`);
+      const response = await fetch(`${API_BASE_URL}/api/themes/${currentBranchId}/chat/status`);
       const data = await response.json();
       const status = data.initialized as boolean;
       setIsConnected(status);
@@ -200,7 +214,7 @@ const ChatPanel: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/connect`, {
+      await fetch(`${API_BASE_URL}/api/themes/${currentBranchId}/chat/connect`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -301,7 +315,7 @@ const ChatPanel: React.FC = () => {
 
     try {
       // Send message, history, and context to backend
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/api/themes/${currentBranchId}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, Router } from "express";
 import { McpClient } from "../mcp/client.js";
 import { logger } from "../utils/logger.js";
 
@@ -80,7 +80,8 @@ router.post("/", async (req, res) => {
 });
 
 // POST /api/chat/connect - Connect to the MCP server defined in .env
-router.post("/connect", async (req, res) => {
+router.post("/connect", async (req: Request<{ themeId: string }>, res: Response) => {
+
   try {
     const serverPath = process.env.MCP_SERVER_PATH;
 
@@ -109,7 +110,7 @@ router.post("/connect", async (req, res) => {
 });
 
 // GET /api/chat/status - Check MCP client status
-router.get("/status", (req, res) => {
+router.get("/status", (req: Request<{ themeId: string }>, res: Response) => {
   return res.json({
     initialized: mcpClient !== null,
     tools: mcpClient ? mcpClient.tools : [],

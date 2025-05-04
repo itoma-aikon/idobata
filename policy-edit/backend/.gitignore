@@ -8,6 +8,10 @@ yarn-error.log
 build/
 dist/
 
+# Generate OGP images directory
+generated_ogp_images/
+
+
 # Environment variables
 .env
 .env.local

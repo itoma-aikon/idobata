@@ -17,10 +17,8 @@ const generatedImagesDir = path.join(__dirname, '..', '..', 'generated_ogp_image
 fs.mkdir(generatedImagesDir, { recursive: true }).catch(console.error);
 
 // カスタムフォントの登録
-// Dockerfileで /usr/share/fonts/custom/ に移動されたフォントを参照するようにパスを修正
 try {
-   // registerFont(path.join(__dirname, '..', '..', 'fonts', 'NotoSansJP-Regular.ttf'), { family: 'Noto Sans JP' }); // 以前のパス
-   registerFont('/usr/share/fonts/custom/NotoSansJP-Regular.ttf', { family: 'Noto Sans JP' }); // ★ 新しいパスに修正
+   registerFont('/usr/share/fonts/custom/NotoSansJP-Regular.ttf', { family: 'Noto Sans JP' }); 
 } catch (error) {
    console.warn('カスタムフォントの登録に失敗しました:', error);
    console.warn('デフォルトのシステムフォントを使用します。システムフォントに必要なグリフ（例: 三点リーダー U+2026）がない場合、OGP画像が正しく表示されない可能性があります。');
@@ -293,7 +291,7 @@ const drawTitle = (
 
         // 描画前に必要に応じて幅に合わせて切り詰め (省略記号なし)
         context.font = `${fontSize}px ${fontFamily}`; // 測定・描画前にフォントを設定
-         lineToDraw = getWrappedTextWithEllipsis(context, lineToDraw, maxWidth); // ★ 省略記号なしの関数を使用
+         lineToDraw = getWrappedTextWithEllipsis(context, lineToDraw, maxWidth); 
 
 
         // テキスト位置を計算 (maxWidth内で中央寄せ)

@@ -65,14 +65,14 @@ export async function fetchGitHubContent(
 
   let apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
-    apiUrl += `?ref=${encodeURIComponent(ref)}`; // あなたのブランチの内容を採用 (refパラメータに必要)
+    apiUrl += `?ref=${encodeURIComponent(ref)}`; 
   }
-  console.log(`Fetching from GitHub API: ${apiUrl}`); // upstream/main のデバッグログを採用
+  console.log(`Fetching from GitHub API: ${apiUrl}`); 
 
-  // GitHub Personal Access Token を環境変数から取得し、認証ヘッダーに追加 (あなたのブランチの内容を採用)
+  // GitHub Personal Access Token を環境変数から取得し、認証ヘッダーに追加
   const githubPat = import.meta.env.VITE_GITHUB_PAT;
   const headers: HeadersInit = {
-    Accept: "application/vnd.github.v3+json", // APIバージョン指定 (両方のブランチにあるので残す)
+    Accept: "application/vnd.github.v3+json", // APIバージョン指定
   };
   if (githubPat) {
     headers["Authorization"] = `token ${githubPat}`;
@@ -100,9 +100,9 @@ export async function fetchGitHubContent(
       } catch (jsonError) {
         // JSONパース失敗時はステータス情報のみ
       }
-      console.error(errorMessage); // エラーログ (両方のブランチにあるので残す)
+      console.error(errorMessage); // エラーログ
 
-      // 404 エラーで、かつ特定の ref を指定していた場合、デフォルトブランチへのフォールバックを試みる (あなたのブランチの内容を採用)
+      // 404 エラーで、かつ特定の ref を指定していた場合、デフォルトブランチへのフォールバックを試みる 
       // 無限ループを防ぐため、デフォルトブランチへの取得は一度だけ試みる
       if (response.status === 404 && ref !== undefined && ref !== "") {
         console.warn(
@@ -134,7 +134,7 @@ export async function fetchGitHubContent(
         }
       } else {
         // 404 エラーではない場合、またはデフォルトブランチでの取得が失敗した場合
-        // 既存のエラーメッセージを詳細化してスロー (あなたのブランチの内容を採用)
+        // 既存のエラーメッセージを詳細化してスロー 
         throw new Error(
           `Failed to fetch content for path "${path}" with ref "${ref}". ${errorMessage}`
         );
@@ -147,8 +147,8 @@ export async function fetchGitHubContent(
     console.error("Error fetching GitHub content:", error);
     // fetch自体が失敗した場合 (ネットワークエラーなど)
     if (error instanceof Error) {
-      throw error; // 元のエラーを再スロー (両方のブランチにあるので残す)
-    } else { // あなたのブランチの内容を採用 (不明なエラーの場合)
+      throw error; // 元のエラーを再スロー 
+    } else { 
       throw new Error("An unknown error occurred during fetch.");
     }
   }
@@ -161,10 +161,9 @@ export async function fetchGitHubContent(
  */
 export function decodeBase64Content(base64String: string): string {
     try {
-      return Buffer.from(base64String, "base64").toString("utf-8"); // あなたのブランチのデコード方法を採用
+      return Buffer.from(base64String, "base64").toString("utf-8"); 
     } catch (error) {
       console.error("Error decoding Base64 content:", error);
-      // upstream/main のより詳細なエラーハンドリングを参考に、一般的なメッセージを返す
       return "Error decoding content";
     }
   }

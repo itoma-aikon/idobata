@@ -98,9 +98,9 @@ router.post('/generate', async (req, res) => {
 
     // 背景のグラデーションを描画 (全体に適用)
     const gradient = context.createLinearGradient(0, canvas.height, canvas.width, 0);
-    gradient.addColorStop(0.2, 'hsla(259, 83%, 84%, 1)');
-    gradient.addColorStop(1, 'hsla(169, 80%, 73%, 1)');
-    context.fillStyle = gradient;
+    gradient.addColorStop(0, 'hsla(216, 100%, 74%, 1)'); // 上の色 #8ABAFF
+    gradient.addColorStop(1, 'hsla(150, 58%, 74%, 1)');  // 下の色 #9FEADD    
+    context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
 
 
